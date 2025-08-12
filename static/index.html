@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Face Recognition App</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Face Recognition</h1>
+
+    <div class="video-container">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas" class="hidden"></canvas>
+      <div id="overlay" class="overlay"></div>
+    </div>
+
+    <div class="controls">
+      <div class="register">
+        <input id="nameInput" type="text" placeholder="Enter name to register" />
+        <button id="registerBtn">Register Face</button>
+      </div>
+      <div class="actions">
+        <button id="recognizeToggle">Start Recognizing</button>
+        <button id="refreshList">Refresh Registered List</button>
+        <button id="clearAll" class="danger">Clear All</button>
+      </div>
+    </div>
+
+    <div class="status">
+      <div>Current: <span id="currentName">-</span> <span id="currentScore"></span></div>
+      <div id="thumbWrap" class="thumb-wrap hidden">
+        <img id="lastFace" alt="Last recognized face" />
+        <span id="lastFaceTime" class="thumb-time"></span>
+      </div>
+      <div id="message" class="message"></div>
+    </div>
+
+    <h2>Registered Identities</h2>
+    <ul id="facesList"></ul>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
