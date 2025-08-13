@@ -1,3 +1,7 @@
 /.venv
 /data
+<<<<<<< HEAD
 /certs
+=======
+/certs
+>>>>>>> cbe99f889037424ec92d937339d655b5a8d1770b
