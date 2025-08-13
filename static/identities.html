@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registered Identities</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .toolbar { display: flex; gap: 8px; margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Registered Identities</h1>
+
+    <div class="nav">
+      <a href="/">Recognize</a>
+      <a href="/register">Register</a>
+    </div>
+
+    <div class="toolbar">
+      <button id="refreshList">Refresh</button>
+      <button id="clearAll" class="danger">Clear All</button>
+    </div>
+
+    <ul id="facesList"></ul>
+
+    <div class="panel hidden" id="editPanel">
+      <h2>Edit Identity</h2>
+      <div class="form">
+        <input id="editName" type="text" placeholder="New name" />
+        <input id="editPid" type="text" placeholder="New personnel ID (optional)" />
+        <button id="saveEdit">Save</button>
+        <button id="cancelEdit">Cancel</button>
+      </div>
+    </div>
+
+    <div id="message" class="message"></div>
+  </div>
+
+  <script src="/static/identities.js"></script>
+</body>
+</html>
+
+

@@ -10,6 +10,11 @@
   <div class="container">
     <h1>Face Recognition</h1>
 
+    <div class="nav">
+      <a href="/register">Register</a>
+      <a href="/identities">Identities</a>
+    </div>
+
     <div class="video-container">
       <video id="video" autoplay playsinline></video>
       <canvas id="canvas" class="hidden"></canvas>
@@ -17,14 +22,9 @@
     </div>
 
     <div class="controls">
-      <div class="register">
-        <input id="nameInput" type="text" placeholder="Enter name to register" />
-        <button id="registerBtn">Register Face</button>
-      </div>
+      <div></div>
       <div class="actions">
         <button id="recognizeToggle">Start Recognizing</button>
-        <button id="refreshList">Refresh Registered List</button>
-        <button id="clearAll" class="danger">Clear All</button>
       </div>
     </div>
 
@@ -36,9 +36,6 @@
       </div>
       <div id="message" class="message"></div>
     </div>
-
-    <h2>Registered Identities</h2>
-    <ul id="facesList"></ul>
   </div>
 
   <script src="/static/app.js"></script>

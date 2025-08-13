@@ -47,6 +47,14 @@ def on_startup() -> None:
 def root() -> FileResponse:
     return FileResponse("static/index.html")
 
+@app.get("/register")
+def register_page() -> FileResponse:
+    return FileResponse("static/register.html")
+
+@app.get("/identities")
+def identities_page() -> FileResponse:
+    return FileResponse("static/identities.html")
+
 
 def load_image_as_bgr(image_bytes: bytes) -> np.ndarray:
     image = Image.open(BytesIO(image_bytes)).convert("RGB")
@@ -75,6 +83,25 @@ def extract_primary_embedding(bgr_image: np.ndarray) -> Tuple[np.ndarray, List[i
     yi2 = int(max(0, min(h - 1, round(float(y2)))))
     bbox: List[int] = [xi1, yi1, xi2, yi2]
     return emb.astype(np.float32), bbox
+
+
+def extract_all_embeddings(bgr_image: np.ndarray) -> List[Tuple[np.ndarray, List[int]]]:
+    if face_analyzer is None:
+        raise RuntimeError("Face analyzer not initialized")
+    faces = face_analyzer.get(bgr_image)
+    results: List[Tuple[np.ndarray, List[int]]] = []
+    h, w = bgr_image.shape[:2]
+    for f in faces:
+        emb = f.normed_embedding
+        if emb is None or emb.size == 0:
+            continue
+        x1, y1, x2, y2 = f.bbox
+        xi1 = int(max(0, min(w - 1, round(float(x1)))))
+        yi1 = int(max(0, min(h - 1, round(float(y1)))))
+        xi2 = int(max(0, min(w - 1, round(float(x2)))))
+        yi2 = int(max(0, min(h - 1, round(float(y2)))))
+        results.append((emb.astype(np.float32), [xi1, yi1, xi2, yi2]))
+    return results
 
 
 def _sanitize_identity(name: str) -> str:
@@ -151,7 +178,11 @@ def save_annotated_full_image(
 
 
 @app.post("/api/register")
-async def register_face(name: str = Form(...), image: UploadFile = File(...)) -> JSONResponse:
+async def register_face(
+    name: str = Form(...),
+    image: UploadFile = File(...),
+    personnel_id: Optional[str] = Form(None),
+) -> JSONResponse:
     if not name or not name.strip():
         raise HTTPException(status_code=400, detail="Name is required")
     content = await image.read()
@@ -160,9 +191,16 @@ async def register_face(name: str = Form(...), image: UploadFile = File(...)) ->
         emb, bbox = extract_primary_embedding(bgr)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    storage.add_face(name.strip(), emb)
+    pid = (personnel_id or "").strip() or None
+    storage.add_face(name.strip(), emb, personnel_id=pid)
     annotated_url = save_annotated_full_image(bgr, bbox, name.strip(), category="registered")
-    return JSONResponse({"ok": True, "name": name.strip(), "bbox": bbox, "registered_image_url": annotated_url})
+    return JSONResponse({
+        "ok": True,
+        "name": name.strip(),
+        "personnel_id": pid,
+        "bbox": bbox,
+        "registered_image_url": annotated_url,
+    })
 
 
 @app.post("/api/recognize")
@@ -170,27 +208,74 @@ async def recognize_face(image: UploadFile = File(...), threshold: float = Form(
     content = await image.read()
     try:
         bgr = load_image_as_bgr(content)
-        emb, bbox = extract_primary_embedding(bgr)
+        detections = extract_all_embeddings(bgr)
     except ValueError:
-        return JSONResponse({"ok": True, "recognized": False, "name": None, "score": None})
-    match = storage.best_match(emb, threshold=threshold)
-    if match is None:
-        return JSONResponse({"ok": True, "recognized": False, "name": None, "score": None})
-    name, score = match
+        return JSONResponse({"ok": True, "recognized": False, "results": []})
+    results = []
+    any_recognized = False
     h, w = bgr.shape[:2]
-    ts_dt = datetime.utcnow()
-    ts_str = ts_dt.strftime("%Y%m%d_%H%M%S_%f")
-    face_url = save_face_crop(bgr, bbox, name, ts=ts_str)
+    for emb, bbox in detections:
+        match = storage.best_match(emb, threshold=threshold)
+        if match is None:
+            results.append({
+                "name": "bilinmeyen",
+                "personnel_id": None,
+                "score": None,
+                "bbox": bbox,
+                "image_size": [w, h],
+                "face_image_url": None,
+                "recognized": False,
+            })
+            continue
+        name, personnel_id, score = match
+        ts_dt = datetime.utcnow()
+        ts_str = ts_dt.strftime("%Y%m%d_%H%M%S_%f")
+        face_url = save_face_crop(bgr, bbox, name, ts=ts_str)
+        any_recognized = True
+        results.append({
+            "name": name,
+            "personnel_id": personnel_id,
+            "score": score,
+            "bbox": bbox,
+            "image_size": [w, h],
+            "face_image_url": face_url,
+            "recognized_at": ts_dt.isoformat() + "Z",
+            "recognized": True,
+        })
     return JSONResponse({
         "ok": True,
-        "recognized": True,
-        "name": name,
-        "score": score,
-        "bbox": bbox,
+        "recognized": any_recognized,
         "image_size": [w, h],
-        "face_image_url": face_url,
-        "recognized_at": ts_dt.isoformat() + "Z",
+        "results": results,
     })
+
+
+@app.post("/api/identity/delete")
+async def delete_identity(name: str = Form(...), personnel_id: Optional[str] = Form(None)) -> JSONResponse:
+    if not name or not name.strip():
+        raise HTTPException(status_code=400, detail="Name is required")
+    removed = storage.delete_identity(name.strip(), (personnel_id or "").strip() or None)
+    return JSONResponse({"ok": True, "removed": removed})
+
+
+@app.post("/api/identity/rename")
+async def rename_identity(
+    old_name: str = Form(...),
+    old_personnel_id: Optional[str] = Form(None),
+    new_name: str = Form(...),
+    new_personnel_id: Optional[str] = Form(None),
+) -> JSONResponse:
+    if not new_name or not new_name.strip():
+        raise HTTPException(status_code=400, detail="New name is required")
+    changed = storage.rename_identity(
+        old_name.strip(),
+        (old_personnel_id or "").strip() or None,
+        new_name.strip(),
+        (new_personnel_id or "").strip() or None,
+    )
+    if changed == 0:
+        raise HTTPException(status_code=404, detail="Identity not found")
+    return JSONResponse({"ok": True, "changed": changed})
 
 
 @app.get("/api/faces")

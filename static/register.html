@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register Face</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; margin: 12px 0; }
+    .help { color: #a1a1aa; font-size: 0.9rem; }
+  </style>
+  </head>
+<body>
+  <div class="container">
+    <h1>Register Face</h1>
+
+    <div class="nav">
+      <a href="/">Recognize</a>
+      <a href="/identities">Identities</a>
+    </div>
+
+    <div class="video-container">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas" class="hidden"></canvas>
+      <div id="overlay" class="overlay"></div>
+    </div>
+
+    <div class="form">
+      <input id="nameInput" type="text" placeholder="Full name" />
+      <input id="personnelIdInput" type="text" placeholder="Personnel ID (optional)" />
+      <button id="registerBtn">Register</button>
+    </div>
+
+    <div class="status">
+      <div id="message" class="message"></div>
+      <div class="help">Position your face in view, then click Register. One sample is stored per click.</div>
+    </div>
+  </div>
+
+  <script src="/static/register.js"></script>
+</body>
+</html>
+
+
